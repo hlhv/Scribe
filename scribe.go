@@ -25,13 +25,31 @@ const (
 
 type Message struct {
         Type    MessageType
+	Level   LogLevel
         Content []interface{}
 }
 
+type LogLevel int
+
+const (
+	// print any and all info for debugging purposes.
+	LogLevelDebug  LogLevel = 0
+	// only print some info, such as logging requests and connections, and
+	// errors
+	LogLevelNormal LogLevel = 1
+	// only print errors
+	LogLevelError  LogLevel = 2
+	// completely disable logging. this is not reccomended.
+	LogLevelNone   LogLevel = 3
+)
+
 var queue chan Message = make(chan Message, 16)
 
-func ListenOnce () {
+func ListenOnce (level LogLevel) {
         message := <- queue
+
+	// if the message level isn't large enough, don't print it
+        if level > message.Level { return }
 
         content := message.Content
         content = append(content, "")
@@ -97,22 +115,58 @@ func ListenOnce () {
         }
 }
 
-func Print (t MessageType, content ...interface{}) {
+func Print (t MessageType, level LogLevel, content ...interface{}) {
         queue <- Message {
                 Type:    t,
                 Content: content, 
         }
 }
 
-func PrintProgress   (content ...interface{}) { Print(Progress,   content...) }
-func PrintDone       (content ...interface{}) { Print(Done,       content...) }
-func PrintInfo       (content ...interface{}) { Print(Info,       content...) }
-func PrintWarning    (content ...interface{}) { Print(Warning,    content...) }
-func PrintError      (content ...interface{}) { Print(Error,      content...) }
-func PrintFatal      (content ...interface{}) { Print(Fatal,      content...) }
-func PrintRequest    (content ...interface{}) { Print(Request,    content...) }
-func PrintResolve    (content ...interface{}) { Print(Resolve,    content...) }
-func PrintConnect    (content ...interface{}) { Print(Connect,    content...) }
-func PrintMount      (content ...interface{}) { Print(Mount,      content...) }
-func PrintDisconnect (content ...interface{}) { Print(Disconnect, content...) }
-func PrintUnmount    (content ...interface{}) { Print(Unmount,    content...) }
+func PrintProgress   (level LogLevel, content ...interface{}) {
+        Print(Progress,   level, content...)
+}
+
+func PrintDone       (level LogLevel, content ...interface{}) {
+        Print(Done,       level, content...)
+}
+
+func PrintInfo       (level LogLevel, content ...interface{}) {
+        Print(Info,       level, content...)
+}
+
+func PrintWarning    (level LogLevel, content ...interface{}) {
+        Print(Warning,    level, content...)
+}
+
+func PrintError      (level LogLevel, content ...interface{}) {
+        Print(Error,      level, content...)
+}
+
+func PrintFatal      (level LogLevel, content ...interface{}) {
+        Print(Fatal,      level, content...)
+}
+
+func PrintRequest    (level LogLevel, content ...interface{}) {
+        Print(Request,    level, content...)
+}
+
+func PrintResolve    (level LogLevel, content ...interface{}) {
+        Print(Resolve,    level, content...)
+}
+
+func PrintConnect    (level LogLevel, content ...interface{}) {
+        Print(Connect,    level, content...)
+}
+
+func PrintMount      (level LogLevel, content ...interface{}) {
+        Print(Mount,      level, content...)
+}
+
+func PrintDisconnect (level LogLevel, content ...interface{}) {
+        Print(Disconnect, level, content...)
+}
+
+func PrintUnmount    (level LogLevel, content ...interface{}) {
+        Print(Unmount,    level, content...)
+}
+
