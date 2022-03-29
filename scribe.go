@@ -119,6 +119,7 @@ func Print (t MessageType, level LogLevel, content ...interface{}) {
         queue <- Message {
                 Type:    t,
                 Content: content, 
+                Level:   level,
         }
 }
 
