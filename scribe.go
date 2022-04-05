@@ -44,12 +44,14 @@ const (
 )
 
 var queue chan Message = make(chan Message, 16)
+var levelGate LogLevel = LogLevelNormal
 
-func ListenOnce (level LogLevel) {
+func SetLogLevel (level LogLevel) {
+        levelGate = level
+}
+
+func ListenOnce () {
         message := <- queue
-
-	// if the message level isn't large enough, don't print it
-        if level > message.Level { return }
 
         content := message.Content
         content = append(content, "")
@@ -116,6 +118,9 @@ func ListenOnce (level LogLevel) {
 }
 
 func Print (t MessageType, level LogLevel, content ...interface{}) {
+        // if the message level isn't large enough, don't send it
+        if levelGate > level { return }
+        
         queue <- Message {
                 Type:    t,
                 Content: content, 
