@@ -4,42 +4,57 @@ import "os"
 import "log"
 import "time"
 
+/* Different types of message. These determine what kind of symbol is displayed
+ * on a message.
+ */
 type MessageType int
 
+/* All message types.
+ */
 const (
-        Progress MessageType = iota
-        Done
-        Info
-        Warning
-        Error
-        Fatal
-        Request
-        Resolve
-        Connect
-        Mount
-        Disconnect
-        Unmount
-        Bind
-        Unbind
+        /* ... */ Progress MessageType = iota
+        /* .// */ Done
+        /* (i) */ Info
+        /* !!! */ Warning
+        /* ERR */ Error
+        /* XXX */ Fatal
+        /* ->? */ Request
+        /* ->! */ Resolve
+        /* --> */ Connect
+        /* -=E */ Mount
+        /* <-- */ Disconnect
+        /* X=- */ Unmount
+        /* =#= */ Bind
+        /* =X= */ Unbind
 )
 
+/* Message structs are sent down Scribe's message channel. They contain
+ * information about the message to be logged.
+ */
 type Message struct {
+        // The type of the message
         Type    MessageType
+        // The importance of a message
 	Level   LogLevel
+	// The message content (what gets printed)
         Content []interface{}
 }
 
+/* LogLevel specifies what messages are to be logged, and what messages are to
+ * be ignored. */
 type LogLevel int
 
+/* All log levels.
+ */
 const (
-	// print any and all info for debugging purposes.
+	// Print any and all info for debugging purposes.
 	LogLevelDebug  LogLevel = 0
-	// only print some info, such as logging requests and connections, and
+	// Only print some info, such as logging requests and connections, and
 	// errors
 	LogLevelNormal LogLevel = 1
-	// only print errors
+	// Only print errors
 	LogLevelError  LogLevel = 2
-	// completely disable logging. this is not reccomended.
+	// Completely disable logging. You DO NOT want to do this!
 	LogLevelNone   LogLevel = 3
 )
 
@@ -58,10 +73,21 @@ var previousDay        int
 
 var currentFile *os.File
 
+/* SetLogLevel sets the log level. Only messages with the specified log level
+ * or higher will be logged.
+ */
 func SetLogLevel (level LogLevel) {
         levelGate = level
 }
 
+/* SetLogDirectory sets the directory logs are to be written to. In this
+ * directory, log files will be created with a name formatted like this:
+ *
+ * YYYY-MM-DD.log
+ *
+ * When a message is logged, and a day has passed since the last message, a new
+ * file is created.
+ */
 func SetLogDirectory (directoryName string) {
         if directoryName[len(directoryName) - 1] != '/' {
                 directoryName += "/"
@@ -70,11 +96,17 @@ func SetLogDirectory (directoryName string) {
         loggingToDirectory = true
 }
 
+/* UnsetLogDirectory causes the logging system to stop writing to files, and
+ * sets all output to stdout.
+ */
 func UnsetLogDirectory () {
         loggingToDirectory = false
         logger.SetOutput(os.Stdout)
 }
 
+/* ListenOnce listens for one message. This function is blocking and should be
+ * run in a loop.
+ */
 func ListenOnce () {
         message := <- queue
 
@@ -100,6 +132,7 @@ func ListenOnce () {
 
         if loggingToDirectory && currentDay > previousDay {
                 if currentFile != nil {
+                        // TODO: compress the previous file
                         currentFile.Close()
                 }
 
@@ -122,6 +155,8 @@ func ListenOnce () {
         previousDay = currentDay
 }
 
+/* Print queues a single message to be logged/
+ */
 func Print (t MessageType, level LogLevel, content ...interface{}) {
         // if the message level isn't large enough, don't send it
         if levelGate > level { return }
@@ -133,50 +168,91 @@ func Print (t MessageType, level LogLevel, content ...interface{}) {
         }
 }
 
-func PrintProgress   (level LogLevel, content ...interface{}) {
-        Print(Progress,   level, content...)
+/* PrintProgress logs a message of type progress. This should be used to log
+ * steps of an overall task.
+ */
+func PrintProgress (level LogLevel, content ...interface{}) {
+        Print(Progress, level, content...)
 }
 
-func PrintDone       (level LogLevel, content ...interface{}) {
-        Print(Done,       level, content...)
+/* PrintDone logs a message of type done. This should be used to log the
+ * successful completion of a task.
+ */
+func PrintDone (level LogLevel, content ...interface{}) {
+        Print(Done, level, content...)
 }
 
-func PrintInfo       (level LogLevel, content ...interface{}) {
-        Print(Info,       level, content...)
+/* PrintDone logs a message of type info. This should be used to log
+ * informational messages and general observations the program makes that could
+ * be useful to whoever is reading the log.
+ */
+func PrintInfo (level LogLevel, content ...interface{}) {
+        Print(Info, level, content...)
 }
 
-func PrintWarning    (level LogLevel, content ...interface{}) {
-        Print(Warning,    level, content...)
+/* PrintWarning logs a message of type warning. This should be used to log a
+ * problem which did not cause an error. Useful for logging suspicious behavior
+ * or insecure configuration parameters.
+ */
+func PrintWarning (level LogLevel, content ...interface{}) {
+        Print(Warning, level, content...)
 }
 
-func PrintError      (level LogLevel, content ...interface{}) {
-        Print(Error,      level, content...)
+/* PrintError logs a message of type error. This should be used when an
+ * operation encounters a problem. This typically causes the operation to halt.
+ * This should not log an event that causes a goroutine or the entire program
+ * to stop.
+ */
+func PrintError (level LogLevel, content ...interface{}) {
+        Print(Error, level, content...)
 }
 
-func PrintFatal      (level LogLevel, content ...interface{}) {
-        Print(Fatal,      level, content...)
+/* PrintFatal logs a message of type fatal. This should be used to log errors
+ * that caused a goroutine, internal communication channel, or the entire
+ * program to terminate.
+ */
+func PrintFatal (level LogLevel, content ...interface{}) {
+        Print(Fatal, level, content...)
 }
 
-func PrintRequest    (level LogLevel, content ...interface{}) {
-        Print(Request,    level, content...)
+/* PrintRequest logs a message of type request. This should be used to log an
+ * external request made by a client.
+ */
+func PrintRequest (level LogLevel, content ...interface{}) {
+        Print(Request, level, content...)
 }
 
-func PrintResolve    (level LogLevel, content ...interface{}) {
-        Print(Resolve,    level, content...)
+/* PrintResolve logs a message of type resolve. This should be used when a
+ * request made by a client was resolved successfully.
+ */
+func PrintResolve (level LogLevel, content ...interface{}) {
+        Print(Resolve, level, content...)
 }
 
-func PrintConnect    (level LogLevel, content ...interface{}) {
-        Print(Connect,    level, content...)
+/* PrintConnect logs a message of type connect. This should be used to log a
+ * client connecting.
+ */
+func PrintConnect (level LogLevel, content ...interface{}) {
+        Print(Connect, level, content...)
 }
 
-func PrintMount      (level LogLevel, content ...interface{}) {
-        Print(Mount,      level, content...)
+/* PrintMount logs a message of type mount. This should be used to log a client
+ * mounting successfully.
+ */
+func PrintMount (level LogLevel, content ...interface{}) {
+        Print(Mount, level, content...)
 }
 
+/* PrintDisconnect logs a message of type disconnect. This should be used to log
+ * a client disconnecting.
+ */
 func PrintDisconnect (level LogLevel, content ...interface{}) {
         Print(Disconnect, level, content...)
 }
 
-func PrintUnmount    (level LogLevel, content ...interface{}) {
-        Print(Unmount,    level, content...)
+/* PrintUnmount logs a message of type unmount This should be used to log a
+ * client unmounting successfully.
+ */
+func PrintUnmount (level LogLevel, content ...interface{}) {
+        Print(Unmount, level, content...)
 }
