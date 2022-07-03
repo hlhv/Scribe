@@ -12,20 +12,34 @@ type MessageType int
 /* All message types.
  */
 const (
-        /* ... */ Progress MessageType = iota
-        /* .// */ Done
-        /* (i) */ Info
-        /* !!! */ Warning
-        /* ERR */ Error
-        /* XXX */ Fatal
-        /* ->? */ Request
-        /* ->! */ Resolve
-        /* --> */ Connect
-        /* -=E */ Mount
-        /* <-- */ Disconnect
-        /* X=- */ Unmount
-        /* =#= */ Bind
-        /* =X= */ Unbind
+        // ...
+        Progress MessageType = iota
+        // .//
+        Done
+        // (i)
+        Info
+        // !!!
+        Warning
+        // ERR
+        Error
+        // XXX
+        Fatal
+        // ->?
+        Request
+        // ->!
+        Resolve
+        // -->
+        Connect
+        // -=E
+        Mount
+        // <--
+        Disconnect
+        // X=-
+        Unmount
+        // =#=
+        Bind
+        // =X=
+        Unbind
 )
 
 /* Message structs are sent down Scribe's message channel. They contain
@@ -127,6 +141,11 @@ func ListenOnce () {
                 case Unbind:     logger.SetPrefix("=X= ")
         }
 
+        updateCurrentFile()
+        logger.Println(message.Content...)
+}
+
+func updateCurrentFile () {
         now := time.Now()
         currentDay := (now.Year() - 1970) * 365 + now.YearDay()
 
@@ -151,7 +170,6 @@ func ListenOnce () {
                 }
         }
         
-        logger.Println(message.Content...)
         previousDay = currentDay
 }
 
