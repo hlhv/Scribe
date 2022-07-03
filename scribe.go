@@ -1,8 +1,8 @@
 package scribe
 
-import (
-        "log"
-)
+import "os"
+import "log"
+import "time"
 
 type MessageType int
 
@@ -46,75 +46,79 @@ const (
 var queue chan Message = make(chan Message, 16)
 var levelGate LogLevel = LogLevelNormal
 
+var logger = log.New (
+        os.Stdout, "",
+        log.Ldate |
+        log.Ltime |
+        log.Lmsgprefix)
+
+var loggingToDirectory bool
+var logDirectory       string
+var previousTime       time.Time = time.Unix(0, 0)
+
+var currentFile *os.File
+
 func SetLogLevel (level LogLevel) {
         levelGate = level
+}
+
+func SetLogDirectory (directoryName string) {
+        if directoryName[len(directoryName) - 1] != '/' {
+                directoryName += "/"
+        }
+        logDirectory       = directoryName
+        loggingToDirectory = true
+}
+
+func UnsetLogDirectory () {
+        loggingToDirectory = false
+        logger.SetOutput(os.Stdout)
 }
 
 func ListenOnce () {
         message := <- queue
 
-        content := message.Content
-        content = append(content, "")
-        copy(content[1:], content)
-
         switch message.Type {
-        case Progress:
-                content[0] = "..."
-                log.Println(content...)
-                break
-        case Done:
-                content[0] = ".//"
-                log.Println(content...)
-                break
-        case Info:
-                content[0] = "(i)"
-                log.Println(content...)
-                break
-        case Warning:
-                content[0] = "!!!"
-                log.Println(content...)
-                break
-        case Error:
-                content[0] = "ERR"
-                log.Println(content...)
-                break
-        case Fatal:
-                content[0] = "XXX"
-                log.Fatalln(content...)
-                break
-        case Request:
-                content[0] = "->?"
-                log.Println(content...)
-                break
-        case Resolve:
-                content[0] = "->!"
-                log.Println(content...)
-                break
-        case Connect:
-                content[0] = "-->"
-                log.Println(content...)
-                break
-        case Mount:
-                content[0] = "-=E"
-                log.Println(content...)
-                break
-        case Disconnect:
-                content[0] = "<--"
-                log.Println(content...)
-                break
-        case Unmount:
-                content[0] = "X=-"
-                log.Println(content...)
-                break
-        case Bind:
-                content[0] = "=#="
-                log.Println(content...)
-                break
-        case Unbind:
-                content[0] = "=X="
-                log.Println(content...)
-                break
+                case Progress:   logger.SetPrefix("... ")
+                case Done:       logger.SetPrefix(".// ")
+                case Info:       logger.SetPrefix("(i) ")
+                case Warning:    logger.SetPrefix("!!! ")
+                case Error:      logger.SetPrefix("ERR ")
+                case Fatal:      logger.SetPrefix("XXX ")
+                case Request:    logger.SetPrefix("->? ")
+                case Resolve:    logger.SetPrefix("->! ")
+                case Connect:    logger.SetPrefix("--> ")
+                case Mount:      logger.SetPrefix("-=E ")
+                case Disconnect: logger.SetPrefix("<-- ")
+                case Unmount:    logger.SetPrefix("X=- ")
+                case Bind:       logger.SetPrefix("=#= ")
+                case Unbind:     logger.SetPrefix("=X= ")
         }
+
+        now := time.Now()
+
+        if loggingToDirectory && time.Since(previousTime) > time.Hour * 24 {
+                if currentFile != nil {
+                        currentFile.Close()
+                }
+
+                var err error
+                currentFile, err = os.OpenFile (
+                        logDirectory + now.Format("2006-01-02.log"),
+                        os.O_WRONLY |
+                        os.O_APPEND |
+                        os.O_CREATE,
+                        0660)
+
+                if err != nil {
+                        PrintError(LogLevelError, "could not open log file")
+                } else {
+                        logger.SetOutput(currentFile)
+                }
+        }
+        
+        logger.Println(message.Content...)
+        previousTime = now
 }
 
 func Print (t MessageType, level LogLevel, content ...interface{}) {
@@ -175,4 +179,3 @@ func PrintDisconnect (level LogLevel, content ...interface{}) {
 func PrintUnmount    (level LogLevel, content ...interface{}) {
         Print(Unmount,    level, content...)
 }
-
