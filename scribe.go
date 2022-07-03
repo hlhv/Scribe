@@ -54,7 +54,7 @@ var logger = log.New (
 
 var loggingToDirectory bool
 var logDirectory       string
-var previousTime       time.Time = time.Unix(0, 0)
+var previousDay        int
 
 var currentFile *os.File
 
@@ -96,8 +96,9 @@ func ListenOnce () {
         }
 
         now := time.Now()
+        currentDay := (now.Year() - 1970) * 365 + now.YearDay()
 
-        if loggingToDirectory && time.Since(previousTime) > time.Hour * 24 {
+        if loggingToDirectory && currentDay > previousDay {
                 if currentFile != nil {
                         currentFile.Close()
                 }
@@ -118,7 +119,7 @@ func ListenOnce () {
         }
         
         logger.Println(message.Content...)
-        previousTime = now
+        previousDay = currentDay
 }
 
 func Print (t MessageType, level LogLevel, content ...interface{}) {
