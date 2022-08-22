@@ -87,6 +87,14 @@ var previousDay        int
 
 var currentFile *os.File
 
+func init () {
+	go func () {
+		for {
+			listenOnce()
+		}	
+	} ()
+}
+
 /* SetLogLevel sets the log level. Only messages with the specified log level
  * or higher will be logged.
  */
@@ -118,10 +126,10 @@ func UnsetLogDirectory () {
         logger.SetOutput(os.Stdout)
 }
 
-/* ListenOnce listens for one message. This function is blocking and should be
+/* listenOnce listens for one message. This function is blocking and should be
  * run in a loop.
  */
-func ListenOnce () {
+func listenOnce () {
         message := <- queue
 
         switch message.Type {
