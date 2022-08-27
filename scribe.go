@@ -72,8 +72,9 @@ const (
 	LogLevelNone LogLevel = 3
 )
 
-var queue chan Message = make(chan Message, 16)
-var levelGate LogLevel = LogLevelNormal
+var queue      chan Message = make(chan Message, 64)
+var levelGate  LogLevel = LogLevelNormal
+var stopNotify chan int
 
 var logger = log.New(
 	os.Stdout, "",
@@ -91,8 +92,24 @@ func init() {
 	go func() {
 		for {
 			listenOnce()
+
+			// if we have been requested to stop, and there are no
+			// more messages to process, shut down.
+			if stopNotify != nil && len(queue) == 0 {
+				stopNotify <- 0
+				return
+			}
 		}
 	}()
+}
+
+/* Stop causes scribe to log all remaning things, and then completely stop. this
+ * function waits until that has happened.
+ */
+func Stop() {
+	stopNotify = make(chan int)
+	<-stopNotify
+	ensureFileIsClosed()
 }
 
 /* SetLogLevel sets the log level. Only messages with the specified log level
@@ -167,6 +184,13 @@ func listenOnce() {
 	logger.Println(message.Content...)
 }
 
+func ensureFileIsClosed() {
+	if currentFile != nil {
+		currentFile.Close()
+		currentFile = nil
+	}
+}
+
 func updateCurrentFile() {
 	now := time.Now()
 	currentDay := (now.Year()-1970)*365 + now.YearDay()
@@ -190,6 +214,8 @@ func updateCurrentFile() {
 		} else {
 			logger.SetOutput(currentFile)
 		}
+	} else {
+		ensureFileIsClosed()
 	}
 
 	previousDay = currentDay
