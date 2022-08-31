@@ -214,7 +214,9 @@ func updateCurrentFile() {
 		} else {
 			logger.SetOutput(currentFile)
 		}
-	} else {
+	} 
+
+	if !loggingToDirectory {
 		ensureFileIsClosed()
 	}
 
